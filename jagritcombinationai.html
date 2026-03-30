@@ -1,0 +1,658 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>JAGRIT AI // ULTIMATE NEURAL INTERFACE</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&family=Orbitron:wght@400;700;900&family=Space+Grotesk:wght@300;500&display=swap');
+
+        :root {
+            --neon-green: #00ff41;
+            --neon-blue: #00f3ff;
+            --neon-purple: #bc13fe;
+            --dark-bg: #020408;
+            --glass-bg: rgba(10, 15, 30, 0.85);
+        }
+
+        body {
+            background-color: var(--dark-bg);
+            color: var(--neon-green);
+            font-family: 'JetBrains Mono', monospace;
+            overflow: hidden;
+            margin: 0;
+        }
+
+        /* --- BACKGROUND PARTICLES --- */
+        #canvas-bg {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: -1;
+            opacity: 0.4;
+        }
+
+        /* --- UI COMPONENTS --- */
+        .glass-panel {
+            background: var(--glass-bg);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(0, 255, 65, 0.15);
+            box-shadow: 0 0 20px rgba(0, 0, 0, 0.8), inset 0 0 10px rgba(0, 255, 65, 0.05);
+        }
+
+        .cyber-border {
+            position: relative;
+            border-radius: 8px;
+            overflow: hidden;
+            transition: all 0.3s ease;
+        }
+        .cyber-border::before {
+            content: '';
+            position: absolute;
+            top: 0; left: 0; right: 0; height: 1px;
+            background: linear-gradient(90deg, transparent, var(--neon-green), transparent);
+            opacity: 0.5;
+        }
+
+        /* --- TEXT EFFECTS --- */
+        .glitch-text {
+            font-family: 'Orbitron', sans-serif;
+            text-shadow: 0 0 5px var(--neon-green);
+            animation: glitch-anim 3s infinite alternate-reverse;
+        }
+        @keyframes glitch-anim {
+            0% { text-shadow: 2px 0 var(--neon-purple), -2px 0 var(--neon-blue); }
+            10% { text-shadow: 0 0 5px var(--neon-green); transform: skew(0deg); }
+            20% { transform: skew(-2deg); }
+            100% { transform: skew(0deg); }
+        }
+
+        /* --- CHAT MESSAGES --- */
+        .msg-user {
+            background: linear-gradient(90deg, rgba(0, 80, 30, 0.4), transparent);
+            border-left: 3px solid var(--neon-green);
+            text-align: right;
+            align-self: flex-end;
+            border-radius: 8px 0 8px 8px;
+        }
+        .msg-ai {
+            background: linear-gradient(90deg, transparent, rgba(0, 60, 100, 0.4));
+            border-right: 3px solid var(--neon-blue);
+            align-self: flex-start;
+            border-radius: 0 8px 8px 8px;
+            position: relative;
+        }
+        
+        /* --- QUANTUM MATRIX --- */
+        .quantum-matrix {
+            display: flex;
+            align-items: flex-end;
+            justify-content: space-between;
+            height: 60px;
+            gap: 2px;
+            padding: 5px;
+            background: rgba(0,0,0,0.5);
+            border-radius: 4px;
+            border: 1px solid #333;
+        }
+        .q-bar {
+            flex: 1;
+            background: linear-gradient(to top, var(--neon-green), transparent);
+            transition: height 0.1s ease;
+            box-shadow: 0 0 5px var(--neon-green);
+        }
+
+        /* --- SCROLLBAR --- */
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-track { background: #050505; }
+        ::-webkit-scrollbar-thumb { background: #005522; border-radius: 3px; }
+        ::-webkit-scrollbar-thumb:hover { background: var(--neon-green); }
+
+        /* --- UTILS --- */
+        .status-dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; margin-right: 5px; }
+        .bg-online { background-color: var(--neon-green); box-shadow: 0 0 5px var(--neon-green); }
+        .bg-busy { background-color: #ffaa00; box-shadow: 0 0 5px #ffaa00; }
+        .bg-offline { background-color: #ff0044; box-shadow: 0 0 5px #ff0044; }
+
+        .typing::after { content: '▋'; animation: blink 1s infinite; }
+        @keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: 0; } }
+
+        /* Upload Zone */
+        .upload-zone { border: 1px dashed #333; transition: 0.3s; }
+        .upload-zone.active { border-color: var(--neon-blue); background: rgba(0, 243, 255, 0.1); }
+    </style>
+</head>
+<body class="h-screen flex flex-col p-2 md:p-4 overflow-hidden">
+    
+    <canvas id="canvas-bg"></canvas>
+
+    <header class="h-16 glass-panel rounded-t-xl flex items-center justify-between px-6 mb-2 z-10 shrink-0">
+        <div class="flex items-center gap-3">
+            <i class="fa-solid fa-dna text-3xl text-green-400 animate-pulse"></i>
+            <div>
+                <h1 class="text-2xl font-bold glitch-text tracking-wider">JAGRIT<span class="text-xs text-blue-400 align-top">AI.v4</span></h1>
+                <p class="text-[10px] text-gray-400 font-mono">QUANTUM NEURAL INTERFACE // ULTIMATE BUILD</p>
+            </div>
+        </div>
+        <div class="flex items-center gap-4 text-xs font-mono">
+            <div class="flex items-center gap-2 px-3 py-1 rounded bg-black/40 border border-green-900/50">
+                <span class="status-dot bg-online" id="global-status-dot"></span>
+                <span id="global-status-text" class="text-green-400">SYSTEM NOMINAL</span>
+            </div>
+            <button id="voice-btn" class="px-3 py-1 rounded bg-black/40 border border-red-900/50 text-red-400 hover:text-red-200 transition">
+                <i class="fa-solid fa-microphone-slash"></i> VOICE: OFF
+            </button>
+        </div>
+    </header>
+
+    <main class="flex-1 grid grid-cols-1 lg:grid-cols-4 gap-4 min-h-0 z-10">
+        
+        <section class="lg:col-span-3 flex flex-col gap-2 min-h-0">
+            <div id="chat-window" class="flex-1 glass-panel rounded-xl p-4 overflow-y-auto flex flex-col gap-4 font-mono text-sm">
+                <div class="msg-ai p-4 max-w-[80%] border-l-4 border-blue-500 bg-black/40 rounded-r-lg">
+                    <p class="text-blue-400 text-xs mb-1">>> SYSTEM BOOT SEQUENCE</p>
+                    <p class="typing" id="boot-text"></p>
+                </div>
+            </div>
+
+            <div class="h-auto glass-panel rounded-xl p-3 flex gap-2 items-center">
+                <div class="relative flex-1">
+                    <input type="text" id="user-input" autocomplete="off" 
+                        class="w-full bg-black/30 border border-green-900/50 rounded-lg px-4 py-3 text-green-300 placeholder-green-900/50 focus:outline-none focus:border-green-500 transition-colors font-mono"
+                        placeholder="Enter command, query, or 'learn: Q | A'...">
+                    <div class="absolute right-3 top-3 text-xs text-gray-600 hidden md:block">CMD_READY</div>
+                </div>
+                <button id="send-btn" class="bg-green-900/30 hover:bg-green-500/20 text-green-400 border border-green-600 rounded-lg px-6 py-3 transition-all hover:shadow-[0_0_15px_rgba(0,255,65,0.3)]">
+                    <i class="fa-solid fa-paper-plane"></i>
+                </button>
+            </div>
+        </section>
+
+        <section class="lg:col-span-1 flex flex-col gap-2 min-h-0 overflow-y-auto pr-1">
+            
+            <div class="glass-panel rounded-xl p-3">
+                <div class="flex justify-between items-center mb-2">
+                    <h3 class="text-xs font-bold text-blue-400"><i class="fa-solid fa-microchip"></i> QUANTUM CORE</h3>
+                    <span class="text-[10px] text-gray-500">42 TFLOPS</span>
+                </div>
+                <div class="quantum-matrix" id="q-matrix">
+                    </div>
+            </div>
+
+            <div class="glass-panel rounded-xl p-3 space-y-3 font-mono text-xs">
+                <div>
+                    <div class="flex justify-between mb-1">
+                        <span class="text-purple-400">NEURAL LOAD</span>
+                        <span id="cpu-val">0%</span>
+                    </div>
+                    <div class="w-full bg-gray-900 h-1.5 rounded-full overflow-hidden">
+                        <div id="cpu-bar" class="h-full bg-purple-500 transition-all duration-300" style="width: 0%"></div>
+                    </div>
+                </div>
+                <div>
+                    <div class="flex justify-between mb-1">
+                        <span class="text-cyan-400">MEMORY NODES</span>
+                        <span id="mem-val">LOADING</span>
+                    </div>
+                    <div class="w-full bg-gray-900 h-1.5 rounded-full overflow-hidden">
+                        <div id="mem-bar" class="h-full bg-cyan-500 transition-all duration-300" style="width: 0%"></div>
+                    </div>
+                </div>
+                <div>
+                    <div class="flex justify-between mb-1">
+                        <span class="text-yellow-400">WIKI LATENCY</span>
+                        <span id="net-val">0ms</span>
+                    </div>
+                    <div class="w-full bg-gray-900 h-1.5 rounded-full overflow-hidden">
+                        <div id="net-bar" class="h-full bg-yellow-500 transition-all duration-300" style="width: 0%"></div>
+                    </div>
+                </div>
+                <div>
+                    <div class="flex justify-between mb-1">
+                        <span class="text-pink-400">USER SENTIMENT</span>
+                        <span id="sentiment-val">NEUTRAL</span>
+                    </div>
+                    <div class="w-full bg-gray-900 h-1.5 rounded-full overflow-hidden flex">
+                        <div id="sentiment-bar" class="h-full bg-gray-500 transition-all duration-500 mx-auto" style="width: 10%"></div>
+                    </div>
+                </div>
+            </div>
+
+            <div id="drop-zone" class="glass-panel rounded-xl p-4 text-center upload-zone flex flex-col items-center justify-center cursor-pointer min-h-[100px]">
+                <i class="fa-solid fa-cloud-arrow-up text-2xl text-gray-500 mb-2"></i>
+                <p class="text-[10px] text-gray-400">INGEST DATA FILE</p>
+                <input type="file" id="file-input" class="hidden">
+            </div>
+
+            <div class="glass-panel rounded-xl p-3 flex-1 flex flex-col min-h-[150px]">
+                <h3 class="text-xs font-bold text-gray-500 border-b border-gray-800 pb-1 mb-2">SYSTEM LOGS</h3>
+                <div id="sys-log" class="flex-1 overflow-y-auto text-[10px] font-mono space-y-1 text-gray-400 h-full">
+                    </div>
+            </div>
+
+        </section>
+    </main>
+
+    <script>
+        // --- JAGRIT CORE CONFIGURATION ---
+        const CONFIG = {
+            name: "JAGRIT",
+            version: "4.0.1",
+            color: "#00ff41",
+            voiceLang: "en-US"
+        };
+
+        // --- UTILITIES ---
+        const $ = (id) => document.getElementById(id);
+        const random = (min, max) => Math.floor(Math.random() * (max - min + 1)) + min;
+        const sleep = (ms) => new Promise(r => setTimeout(r, ms));
+        
+        // --- PARTICLE BACKGROUND SYSTEM ---
+        class ParticleNetwork {
+            constructor() {
+                this.canvas = $('canvas-bg');
+                this.ctx = this.canvas.getContext('2d');
+                this.particles = [];
+                this.resize();
+                window.addEventListener('resize', () => this.resize());
+                this.init(60);
+                this.animate();
+            }
+            resize() {
+                this.canvas.width = window.innerWidth;
+                this.canvas.height = window.innerHeight;
+            }
+            init(count) {
+                for(let i=0; i<count; i++) {
+                    this.particles.push({
+                        x: Math.random() * this.canvas.width,
+                        y: Math.random() * this.canvas.height,
+                        vx: (Math.random() - 0.5) * 0.5,
+                        vy: (Math.random() - 0.5) * 0.5,
+                        size: Math.random() * 2
+                    });
+                }
+            }
+            animate() {
+                this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+                this.ctx.fillStyle = CONFIG.color;
+                this.ctx.strokeStyle = CONFIG.color;
+                
+                this.particles.forEach((p, i) => {
+                    p.x += p.vx;
+                    p.y += p.vy;
+                    if(p.x < 0 || p.x > this.canvas.width) p.vx *= -1;
+                    if(p.y < 0 || p.y > this.canvas.height) p.vy *= -1;
+
+                    this.ctx.globalAlpha = 0.5;
+                    this.ctx.beginPath();
+                    this.ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+                    this.ctx.fill();
+
+                    // Connections
+                    for(let j=i; j<this.particles.length; j++) {
+                        const p2 = this.particles[j];
+                        const dx = p.x - p2.x;
+                        const dy = p.y - p2.y;
+                        const dist = Math.sqrt(dx*dx + dy*dy);
+                        if(dist < 100) {
+                            this.ctx.globalAlpha = 1 - (dist/100);
+                            this.ctx.lineWidth = 0.5;
+                            this.ctx.beginPath();
+                            this.ctx.moveTo(p.x, p.y);
+                            this.ctx.lineTo(p2.x, p2.y);
+                            this.ctx.stroke();
+                        }
+                    }
+                });
+                requestAnimationFrame(() => this.animate());
+            }
+        }
+
+        // --- JAGRIT INTELLIGENCE CLASS ---
+        class JagritCore {
+            constructor() {
+                this.memory = this.loadMemory();
+                this.isProcessing = false;
+                this.voiceEnabled = false;
+                this.synth = window.speechSynthesis;
+                this.apiLatency = 0;
+                
+                // Initialize Matrix Bars
+                const matrix = $('q-matrix');
+                for(let i=0; i<20; i++) {
+                    const bar = document.createElement('div');
+                    bar.className = 'q-bar';
+                    bar.style.height = '10%';
+                    matrix.appendChild(bar);
+                }
+                this.matrixBars = Array.from(document.querySelectorAll('.q-bar'));
+
+                // Start loops
+                this.startMonitoring();
+                this.log("CORE", "Jagrit Neural Net Initialized.");
+            }
+
+            loadMemory() {
+                const data = localStorage.getItem('jagrit_ultimate_mem');
+                return data ? JSON.parse(data) : {
+                    "hello": "Greetings. I am Jagrit AI, the ultimate neural interface.",
+                    "who are you": "I am Jagrit, a fusion of quantum logic and generative protocols.",
+                    "help": "Commands: [reset memory], [learn: Q | A], [generate image], [calculate 5*5], or ask any question."
+                };
+            }
+
+            saveMemory() {
+                localStorage.setItem('jagrit_ultimate_mem', JSON.stringify(this.memory));
+                this.updateStats();
+            }
+
+            // --- VISUALIZATION LOOPS ---
+            startMonitoring() {
+                setInterval(() => {
+                    // Update Matrix
+                    this.matrixBars.forEach(bar => {
+                        const h = this.isProcessing ? random(40, 100) : random(5, 30);
+                        bar.style.height = `${h}%`;
+                        bar.style.background = this.isProcessing ? 
+                            `linear-gradient(to top, #bc13fe, transparent)` : 
+                            `linear-gradient(to top, #00ff41, transparent)`;
+                    });
+
+                    // Update CPU/RAM
+                    const cpu = this.isProcessing ? random(60, 98) : random(2, 15);
+                    $('cpu-val').innerText = `${cpu}%`;
+                    $('cpu-bar').style.width = `${cpu}%`;
+                    $('cpu-bar').className = `h-full transition-all duration-300 ${cpu > 80 ? 'bg-red-500' : 'bg-purple-500'}`;
+
+                    // Update RAM (Node Count representation)
+                    const nodes = Object.keys(this.memory).length;
+                    const maxNodes = 100; // Arbitrary scale
+                    const memPerc = Math.min((nodes / maxNodes) * 100, 100);
+                    $('mem-val').innerText = `${nodes} NODES`;
+                    $('mem-bar').style.width = `${memPerc}%`;
+
+                    // Update Latency
+                    const lat = this.isProcessing ? this.apiLatency : 0;
+                    $('net-val').innerText = `${lat}ms`;
+                    $('net-bar').style.width = `${Math.min(lat/5, 100)}%`;
+
+                }, 200);
+            }
+
+            log(type, msg) {
+                const time = new Date().toLocaleTimeString('en-US', {hour12:false});
+                const el = document.createElement('div');
+                let color = "text-gray-400";
+                if(type === "ERROR") color = "text-red-400";
+                if(type === "SUCCESS") color = "text-green-400";
+                if(type === "WARN") color = "text-yellow-400";
+                
+                el.innerHTML = `<span class="text-gray-600">[${time}]</span> <span class="${color} font-bold">[${type}]</span> ${msg}`;
+                $('sys-log').appendChild(el);
+                $('sys-log').scrollTop = $('sys-log').scrollHeight;
+            }
+
+            // --- CORE LOGIC ---
+            async process(input) {
+                this.isProcessing = true;
+                this.apiLatency = 0;
+                $('global-status-dot').className = "status-dot bg-busy";
+                $('global-status-text').innerText = "PROCESSING";
+                $('global-status-text').className = "text-yellow-400";
+
+                const clean = input.trim();
+                const lower = clean.toLowerCase();
+
+                // 1. Sentiment Analysis
+                this.analyzeSentiment(lower);
+
+                let response = { type: 'text', content: "" };
+
+                try {
+                    // 2. Commands
+                    if(lower === "reset memory") {
+                        localStorage.removeItem('jagrit_ultimate_mem');
+                        this.memory = this.loadMemory();
+                        this.log("WARN", "Memory Core Wiped.");
+                        response.content = "SYSTEM ALERT: Memory restored to factory settings.";
+                    }
+                    // 3. Learn Protocol
+                    else if(lower.startsWith("learn:")) {
+                        const parts = clean.substring(6).split("|");
+                        if(parts.length === 2) {
+                            const q = parts[0].trim().toLowerCase();
+                            const a = parts[1].trim();
+                            this.memory[q] = a;
+                            this.saveMemory();
+                            this.log("SUCCESS", `New Neural Node: ${q}`);
+                            response.content = `Protocol Accepted. I have learned: "${q}" -> "${a}".`;
+                        } else {
+                            response.content = "Syntax Error. Use: [learn: Question | Answer]";
+                        }
+                    }
+                    // 4. Math Engine
+                    else if(/^[0-9\+\-\*\/\(\)\.\s]+$/.test(clean) || (lower.includes("calculate") && /\d/.test(lower))) {
+                        try {
+                            const mathStr = lower.replace(/[a-z:\s]/g, '');
+                            const res = new Function('return ' + mathStr)();
+                            this.log("INFO", "Math calculation executed.");
+                            response.content = `Computed Result: **${res}**`;
+                        } catch(e) {}
+                    }
+                    // 5. Simulated Generative Media
+                    else if(lower.includes("generate image") || lower.includes("create picture")) {
+                        this.log("INFO", "Generating visual asset...");
+                        await sleep(1500);
+                        response.type = 'image';
+                        response.content = `https://picsum.photos/400/300?random=${Date.now()}`;
+                        response.text = `Generative matrix rendered visual for: "${clean}"`;
+                    }
+                    // 6. Local Memory
+                    else if(this.memory[lower]) {
+                        this.log("INFO", "Local memory hit.");
+                        await sleep(300); // Simulate lookup time
+                        response.content = this.memory[lower];
+                    }
+                    // 7. External Knowledge (Wiki API)
+                    else {
+                        this.log("NET", "Querying External Knowledge Graph...");
+                        response.content = await this.fetchWiki(clean);
+                    }
+
+                } catch(e) {
+                    this.log("ERROR", e.message);
+                    response.content = "CRITICAL ERROR in Neural Path. Please retry.";
+                }
+
+                this.isProcessing = false;
+                $('global-status-dot').className = "status-dot bg-online";
+                $('global-status-text').innerText = "SYSTEM NOMINAL";
+                $('global-status-text').className = "text-green-400";
+                
+                return response;
+            }
+
+            async fetchWiki(query) {
+                const q = query.replace(/who is|what is|tell me about/gi, "").trim();
+                const latency = random(200, 800);
+                this.apiLatency = latency;
+                
+                try {
+                    await sleep(latency);
+                    const res = await fetch(`https://en.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(q)}`);
+                    if(!res.ok) throw new Error('Wiki 404');
+                    const data = await res.json();
+                    
+                    if(data.type === "disambiguation") return `Data is ambiguous. Please be more specific about '${q}'.`;
+                    if(data.extract) return `${data.extract} <br><span class="text-xs text-blue-400">[Source: Wikipedia Database]</span>`;
+                    
+                } catch(e) {
+                    return `My database search yielded no results for '${q}'. Try teaching me with [learn: Q | A].`;
+                }
+                return "No data found.";
+            }
+
+            analyzeSentiment(text) {
+                const positive = ['good', 'great', 'awesome', 'thanks', 'love', 'happy', 'cool'];
+                const negative = ['bad', 'hate', 'stupid', 'error', 'fail', 'wrong', 'sad'];
+                
+                let score = 0;
+                positive.forEach(w => { if(text.includes(w)) score++; });
+                negative.forEach(w => { if(text.includes(w)) score--; });
+
+                const bar = $('sentiment-bar');
+                const label = $('sentiment-val');
+
+                if(score > 0) {
+                    bar.style.width = "75%";
+                    bar.className = "h-full bg-green-500 transition-all duration-500 mx-auto";
+                    label.innerText = "POSITIVE";
+                    label.className = "text-green-400";
+                } else if (score < 0) {
+                    bar.style.width = "25%";
+                    bar.className = "h-full bg-red-500 transition-all duration-500 mx-auto";
+                    label.innerText = "NEGATIVE";
+                    label.className = "text-red-400";
+                } else {
+                    bar.style.width = "50%";
+                    bar.className = "h-full bg-gray-500 transition-all duration-500 mx-auto";
+                    label.innerText = "NEUTRAL";
+                    label.className = "text-gray-400";
+                }
+            }
+
+            speak(text) {
+                if(!this.voiceEnabled) return;
+                this.synth.cancel();
+                // Strip HTML
+                const clean = text.replace(/<[^>]*>/g, '');
+                const utt = new SpeechSynthesisUtterance(clean);
+                utt.pitch = 0.8;
+                utt.rate = 1.1;
+                // Try to find a cool voice
+                const voices = this.synth.getVoices();
+                const v = voices.find(v => v.name.includes('Google') || v.name.includes('Zira'));
+                if(v) utt.voice = v;
+                this.synth.speak(utt);
+            }
+
+            updateStats() {
+                // Triggered on memory save
+            }
+        }
+
+        // --- MAIN INITIALIZATION ---
+        const particleSystem = new ParticleNetwork();
+        const jagrit = new JagritCore();
+
+        // --- UI HANDLERS ---
+        function addMessage(html, isUser) {
+            const div = document.createElement('div');
+            div.className = `p-3 mb-2 text-sm max-w-[85%] ${isUser ? 'msg-user text-green-100' : 'msg-ai text-gray-200'}`;
+            div.innerHTML = html;
+            $('chat-window').appendChild(div);
+            $('chat-window').scrollTop = $('chat-window').scrollHeight;
+        }
+
+        async function handleSubmit() {
+            const txt = $('user-input').value.trim();
+            if(!txt) return;
+
+            addMessage(txt, true);
+            $('user-input').value = "";
+            jagrit.synth.cancel(); // Stop speaking if interrupted
+
+            // Loading indicator
+            const loadId = "load-" + Date.now();
+            const loadDiv = document.createElement('div');
+            loadDiv.id = loadId;
+            loadDiv.className = "p-3 mb-2 text-sm max-w-[85%] msg-ai text-blue-400";
+            loadDiv.innerHTML = `<i class="fa-solid fa-circle-notch fa-spin"></i> Processing Neural Matrix...`;
+            $('chat-window').appendChild(loadDiv);
+            $('chat-window').scrollTop = $('chat-window').scrollHeight;
+
+            // Process
+            const res = await jagrit.process(txt);
+            
+            // Remove loader
+            document.getElementById(loadId).remove();
+
+            // Render Result
+            if(res.type === 'text') {
+                addMessage(res.content, false);
+                jagrit.speak(res.content);
+            } else if (res.type === 'image') {
+                const imgHTML = `
+                    <div class="flex flex-col gap-2">
+                        <span class="text-blue-400 font-bold">GENERATED OUTPUT:</span>
+                        <img src="${res.content}" class="rounded border border-blue-500 shadow-[0_0_10px_#00f3ff] w-full max-h-60 object-cover">
+                        <span class="text-[10px] text-gray-500">${res.text}</span>
+                    </div>`;
+                addMessage(imgHTML, false);
+                jagrit.speak(res.text);
+            }
+        }
+
+        // --- TYPEWRITER EFFECT FOR BOOT ---
+        const bootMsg = "Initializing Jagrit Core... Loading Memory Nodes... Linking to Global Network... SYSTEM READY.";
+        let charI = 0;
+        function typeBoot() {
+            if(charI < bootMsg.length) {
+                $('boot-text').textContent += bootMsg.charAt(charI);
+                charI++;
+                setTimeout(typeBoot, 30);
+            } else {
+                $('boot-text').classList.remove('typing');
+            }
+        }
+        window.onload = typeBoot;
+
+        // --- EVENT LISTENERS ---
+        $('send-btn').onclick = handleSubmit;
+        $('user-input').onkeypress = (e) => { if(e.key === 'Enter') handleSubmit(); };
+
+        $('voice-btn').onclick = () => {
+            jagrit.voiceEnabled = !jagrit.voiceEnabled;
+            const btn = $('voice-btn');
+            if(jagrit.voiceEnabled) {
+                btn.innerHTML = `<i class="fa-solid fa-microphone"></i> VOICE: ON`;
+                btn.className = "px-3 py-1 rounded bg-black/40 border border-green-900/50 text-green-400 hover:text-green-200 transition";
+                jagrit.speak("Voice systems online.");
+                jagrit.log("INFO", "Voice Synthesizer Activated.");
+            } else {
+                btn.innerHTML = `<i class="fa-solid fa-microphone-slash"></i> VOICE: OFF`;
+                btn.className = "px-3 py-1 rounded bg-black/40 border border-red-900/50 text-red-400 hover:text-red-200 transition";
+                jagrit.synth.cancel();
+            }
+        };
+
+        // File Drop
+        const dropZone = $('drop-zone');
+        dropZone.onclick = () => $('file-input').click();
+        
+        dropZone.ondragover = (e) => { e.preventDefault(); dropZone.classList.add('active'); };
+        dropZone.ondragleave = () => dropZone.classList.remove('active');
+        
+        dropZone.ondrop = (e) => {
+            e.preventDefault();
+            dropZone.classList.remove('active');
+            handleFile(e.dataTransfer.files[0]);
+        };
+        
+        $('file-input').onchange = (e) => handleFile(e.target.files[0]);
+
+        function handleFile(file) {
+            if(!file) return;
+            jagrit.log("DATA", `File Ingested: ${file.name} (${(file.size/1024).toFixed(1)} KB)`);
+            addMessage(`SYSTEM: File <strong>${file.name}</strong> has been uploaded to the quantum buffer. Data is ready for analysis.`, false);
+            jagrit.speak("File upload complete. Analyzing data structure.");
+        }
+
+    </script>
+</body>
+</html>
